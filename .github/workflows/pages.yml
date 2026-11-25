@@ -1,0 +1,59 @@
+# Builds the site with build.py and publishes it to GitHub Pages
+# every time you save (commit) a change on the main branch.
+#
+# One-time setup: repository Settings > Pages > Build and deployment >
+# Source = "GitHub Actions".
+
+name: Build and deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # lets you also run it by hand from the Actions tab
+
+env:
+  # While you are still adding images and filling in the yellow placeholders,
+  # leave this "false" so you can preview the site at YOURUSERNAME.github.io.
+  # When you are ready to go live, change it to "true": the deploy will then
+  # fail (and nothing is published) if any placeholder, image or link is
+  # still unfinished.
+  STRICT_LAUNCH_CHECK: "false"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the site
+        run: |
+          if [ "$STRICT_LAUNCH_CHECK" = "true" ]; then
+            python3 build.py --github --strict
+          else
+            python3 build.py --github
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
